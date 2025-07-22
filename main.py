@@ -39,8 +39,8 @@ def visualize_metrics(y_true, y_pred):
     st.dataframe(report_df)
 
 # Streamlit app
-st.title('Brain Tumor Detection')
-st.write('By Olukotun Stephen timileyin 20/47cs/01167')
+st.title('Brain Tumor Detection(Swin Transformer)')
+st.write('By Akintewe Wisdom Pamilerin 22D/47CS/2794 and Fagade Faruq Adedoyin 21/47CS/01523')
 st.write('Upload an MRI image to detect brain tumor.')
 
 # File uploader
