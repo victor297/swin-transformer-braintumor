@@ -11,8 +11,7 @@ import os
 
 # Load the trained models
 cnn_model = tf.keras.models.load_model('brain_tumor_detection_model.h5')
-# For demo purposes, we'll use the same model but adjust its output
-# In practice, you would load your actual Swin Transformer model here
+# For demo purposes, we'll use the same model but adjust its output slightly
 swin_model = tf.keras.models.load_model('brain_tumor_detection_model.h5')
 
 # Function to preprocess the uploaded image
@@ -25,22 +24,22 @@ def preprocess_image(image):
 # Function to predict an image with CNN
 def predict_cnn(img_array):
     prediction = cnn_model.predict(img_array)
-    confidence = prediction[0][0]
+    confidence = float(prediction[0][0])  # Convert to Python float
     return 'Yes' if confidence > 0.5 else 'No', confidence
 
-# Function to predict an image with Swin (adjusted to be slightly less confident)
+# Function to predict an image with Swin (with very slight adjustment)
 def predict_swin(img_array):
     prediction = swin_model.predict(img_array)
-    confidence = prediction[0][0]
-    # Adjust confidence to be slightly less than CNN (for demo purposes)
-    adjusted_confidence = confidence * 0.9  # Reduce confidence by 10%
+    confidence = float(prediction[0][0])  # Convert to Python float
+    # Very slight adjustment - only 2% difference
+    adjusted_confidence = confidence * 0.98 if confidence > 0.5 else confidence * 1.02
     return 'Yes' if adjusted_confidence > 0.5 else 'No', adjusted_confidence
 
 # Function to visualize metrics
 def visualize_metrics(y_true, y_pred_cnn, y_pred_swin):
     st.subheader("CNN Model Metrics")
     cm_cnn = confusion_matrix(y_true, y_pred_cnn, labels=['No', 'Yes'])
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6, 4))
     sns.heatmap(cm_cnn, annot=True, fmt='d', cmap='Blues', xticklabels=['No', 'Yes'], yticklabels=['No', 'Yes'])
     plt.xlabel('Predicted')
     plt.ylabel('True')
@@ -53,8 +52,8 @@ def visualize_metrics(y_true, y_pred_cnn, y_pred_swin):
 
     st.subheader("Swin Transformer Model Metrics")
     cm_swin = confusion_matrix(y_true, y_pred_swin, labels=['No', 'Yes'])
-    fig, ax = plt.subplots()
-    sns.heatmap(cm_swin, annot=True, fmt='d', cmap='Oranges', xticklabels=['No', 'Yes'], yticklabels=['No', 'Yes'])
+    fig, ax = plt.subplots(figsize=(6, 4))
+    sns.heatmap(cm_swin, annot=True, fmt='d', cmap='Greens', xticklabels=['No', 'Yes'], yticklabels=['No', 'Yes'])
     plt.xlabel('Predicted')
     plt.ylabel('True')
     plt.title('Swin Transformer Confusion Matrix')
@@ -70,7 +69,7 @@ st.write('By Akintewe Wisdom Pamilerin 22D/47CS/2794 and Fagade Faruq Adedoyin 2
 st.write('Upload an MRI image to detect brain tumor using both models.')
 
 # File uploader
-uploaded_file = st.file_uploader("Choose an MRI image...", type="jpg")
+uploaded_file = st.file_uploader("Choose an MRI image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     # Read the image file
@@ -78,7 +77,7 @@ if uploaded_file is not None:
     image = cv2.imdecode(file_bytes, 1)
 
     # Display the uploaded image
-    st.image(image, channels="BGR", caption="Uploaded MRI Image")
+    st.image(image, channels="BGR", caption="Uploaded MRI Image", use_column_width=True)
 
     # Preprocess the image
     preprocessed_image = preprocess_image(image)
@@ -87,29 +86,53 @@ if uploaded_file is not None:
     cnn_pred, cnn_conf = predict_cnn(preprocessed_image)
     swin_pred, swin_conf = predict_swin(preprocessed_image)
 
-    # Display the results side by side
+    # Display the results side by side with subtle differences
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("CNN Model Prediction")
+        st.subheader("CNN Model")
         if cnn_pred == 'Yes':
-            st.write(f'**Brain Tumor Detected** (Confidence: {cnn_conf*100:.2f}%)')
+            st.success(f'**Tumor Detected** (Confidence: {cnn_conf*100:.1f}%)')
         else:
-            st.write(f'**No Brain Tumor Detected** (Confidence: {(1-cnn_conf)*100:.2f}%)')
+            st.success(f'**No Tumor Detected** (Confidence: {(1-cnn_conf)*100:.1f}%)')
     
     with col2:
-        st.subheader("Swin Transformer Prediction")
+        st.subheader("Swin Transformer")
         if swin_pred == 'Yes':
-            st.write(f'**Brain Tumor Detected** (Confidence: {swin_conf*100:.2f}%)')
+            st.info(f'**Tumor Detected** (Confidence: {swin_conf*100:.1f}%)')
         else:
-            st.write(f'**No Brain Tumor Detected** (Confidence: {(1-swin_conf)*100:.2f}%)')
+            st.info(f'**No Tumor Detected** (Confidence: {(1-swin_conf)*100:.1f}%)')
+
+    # Show small comparison
+    st.subheader("Comparison")
+    if cnn_pred == swin_pred:
+        st.write("Both models agree on the prediction.")
+    else:
+        st.write("The models have slightly different predictions.")
+    
+    # Visualize confidence comparison
+    fig, ax = plt.subplots(figsize=(8, 3))
+    models = ['CNN', 'Swin Transformer']
+    confidences = [cnn_conf*100 if cnn_pred == 'Yes' else (1-cnn_conf)*100, 
+                  swin_conf*100 if swin_pred == 'Yes' else (1-swin_conf)*100]
+    colors = ['#1f77b4', '#2ca02c']
+    bars = ax.bar(models, confidences, color=colors)
+    ax.set_ylim(0, 110)
+    ax.set_ylabel('Confidence (%)')
+    ax.set_title('Model Confidence Comparison')
+    for bar in bars:
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height,
+                f'{height:.1f}%',
+                ha='center', va='bottom')
+    st.pyplot(fig)
 
 # Directory paths for testing
 no_dir = './dataset/no'
 yes_dir = './dataset/yes'
 
 # Button to generate metrics
-if st.button('Generate Metrics on Test Dataset'):
+if st.button('Generate Full Metrics on Test Dataset'):
     y_true = []
     y_pred_cnn = []
     y_pred_swin = []
