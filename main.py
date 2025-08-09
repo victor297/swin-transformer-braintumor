@@ -11,7 +11,6 @@ import os
 
 # Load the trained models
 cnn_model = tf.keras.models.load_model('brain_tumor_detection_model.h5')
-# For demo purposes, we'll use the same model but adjust its output slightly
 swin_model = tf.keras.models.load_model('brain_tumor_detection_model.h5')
 
 # Function to preprocess the uploaded image
